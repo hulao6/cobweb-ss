@@ -36,7 +36,7 @@ var (
 
 func initV2ray(e *core.ServeEvent) (err error) {
 	defer err0.Then(&err, nil, nil)
-	socket := try.To1(filepath.Abs("./ws.socket"))
+	socket := try.To1(filepath.Abs(wsfilepath))
 	if _, err := os.Stat(socket); err == nil {
 		try.To(os.Remove(socket))
 		os.Remove(socket + ".lock")
