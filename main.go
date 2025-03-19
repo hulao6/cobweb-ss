@@ -7,9 +7,11 @@ import (
 )
 
 var wspath string
+var Version = "dev"
 
 func main() {
 	app := pocketbase.New()
+	app.RootCmd.Version = Version
 	app.RootCmd.PersistentFlags().StringVar(&wspath, "wspath", "/ray", "v2ray websocket path")
 	app.OnServe().BindFunc(initV2ray)
 	try.To(app.Start())
