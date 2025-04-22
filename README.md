@@ -6,9 +6,9 @@
 
 我想教人编程, 但编程的工具链都需要翻墙, 所以我做了这个分享网络给好友, 以便他们进行开发
 
-趁现在还有热度, 放个 aff 链接: https://console.run.claw.cloud/signin?link=TVY0NDGJPJWR
+# claw cloud 使用教程(视频)
 
-# claw 使用教程视频
+趁现在还有热度, 放个 claw cloud 的 aff 注册链接: https://console.run.claw.cloud/signin?link=TVY0NDGJPJWR
 
 https://github.com/user-attachments/assets/767cf8e4-6881-4235-9931-339d54946ff6
 
