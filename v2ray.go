@@ -36,17 +36,20 @@ var (
 
 func initV2ray(e *core.ServeEvent) (err error) {
 	defer err0.Then(&err, nil, nil)
-	socket := try.To1(filepath.Abs(wsfilepath))
-	if _, err := os.Stat(socket); err == nil {
-		try.To(os.Remove(socket))
-		os.Remove(socket + ".lock")
+
+	if wsPort == "0" {
+		wsListen = try.To1(filepath.Abs(wsListen))
+		if _, err := os.Stat(wsListen); err == nil {
+			try.To(os.Remove(wsListen))
+			os.Remove(wsListen + ".lock")
+		}
 	}
 
 	replacer := strings.NewReplacer(
 		"debug", "error",
-		"10000", "0",
-		"127.0.0.1", socket,
-		"/ray", wspath,
+		"10000", wsPort,
+		"127.0.0.1", wsListen,
+		"/ray", wsPath,
 	)
 	v2conf := replacer.Replace(v2rayConf)
 	cfg := try.To1(v2ray.LoadConfig("json", strings.NewReader(v2conf)))
@@ -101,14 +104,22 @@ func initV2ray(e *core.ServeEvent) (err error) {
 
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			conn, err := net.Dial("unix", socket)
+			conn, err := net.Dial("unix", wsListen)
 			return conn, err
 		},
+	}
+	if wsPort != "0" {
+		transport = &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				conn, err := net.Dial("tcp", "127.0.0.1:"+wsPort)
+				return conn, err
+			},
+		}
 	}
 	u := try.To1(url.Parse("http://v2ray.com"))
 	proxy := httputil.NewSingleHostReverseProxy(u)
 	proxy.Transport = transport
-	e.Router.Any(wspath, func(e *core.RequestEvent) (err error) {
+	e.Router.Any(wsPath, func(e *core.RequestEvent) (err error) {
 		proxy.ServeHTTP(e.Response, e.Request)
 		return nil
 	})
