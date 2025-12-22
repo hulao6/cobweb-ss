@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/767cf8e4-6881-4235-9931-339d54946ff6
 # 使用
 
 ```sh
-docker run -d --name cobweb --restart always -v $PWD/pb_data/:/app/pb_data/ -p 10000:10000 shynome/cobweb:v3.2.0
+docker run -d --name cobweb --restart always -v $PWD/pb_data/:/app/pb_data/ -p 10000:10000 shynome/cobweb:v3.2.1
 # 密码和邮箱记得改成自己喜欢的
 docker exec -ti cobweb /app/cobweb superuser create admin@cobweb.www adminadmin
 ```
