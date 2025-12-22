@@ -6,6 +6,14 @@
 
 我想教人编程, 但编程的工具链都需要翻墙, 所以我做了这个分享网络给好友, 以便他们进行开发
 
+# claw cloud 使用教程(视频)
+
+趁现在还有热度, 放个 claw cloud 的 aff 注册链接: https://console.run.claw.cloud/signin?link=TVY0NDGJPJWR
+
+注: 由于 claw cloud 错误地删除了我的数据, 不再进行推荐 (教程还放在这是觉得视频可以作个参考)
+
+https://github.com/user-attachments/assets/767cf8e4-6881-4235-9931-339d54946ff6
+
 # 使用
 
 ```sh
