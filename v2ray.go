@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/apis"
@@ -24,6 +25,7 @@ import (
 	"github.com/v2fly/v2ray-core/v5/features/stats"
 	_ "github.com/v2fly/v2ray-core/v5/main/distro/all"
 	"github.com/v2fly/v2ray-core/v5/proxy"
+	"github.com/v2fly/v2ray-core/v5/proxy/trojan"
 	"github.com/v2fly/v2ray-core/v5/proxy/vmess"
 )
 
@@ -45,23 +47,48 @@ func initV2ray(e *core.ServeEvent) (err error) {
 		}
 	}
 
-	replacer := strings.NewReplacer(
-		"debug", "error",
+	rr := []string{
 		"10000", wsPort,
 		"127.0.0.1", wsListen,
 		"/ray", wsPath,
-	)
+	}
+	if dev := e.App.IsDev(); !dev {
+		rr = append(rr,
+			"debug", "error",
+		)
+	}
+	if trojanPort != "" {
+		rr = append(rr,
+			"10001", trojanPort,
+		)
+	}
+	replacer := strings.NewReplacer(rr...)
 	v2conf := replacer.Replace(v2rayConf)
 	cfg := try.To1(v2ray.LoadConfig("json", strings.NewReader(v2conf)))
+	if trojanPort == "" {
+		cfg.Inbound = slices.DeleteFunc(cfg.Inbound, func(inbound *v2ray.InboundHandlerConfig) bool {
+			return inbound.Tag == "trojan"
+		})
+	}
 	v2 := try.To1(v2ray.New(cfg))
 
 	ibm := v2.GetFeature(inbound.ManagerType()).(inbound.Manager)
 
 	ctx := context.Background()
+	mum := &multiUserManager{}
 	h := try.To1(ibm.GetHandler(ctx, "main"))
-	um := &userManager{h.(proxy.GetInbound).GetInbound().(proxy.UserManager)}
+	mum.um[0] = h.(proxy.GetInbound).GetInbound().(proxy.UserManager)
+	if trojanPort != "" {
+		h := try.To1(ibm.GetHandler(ctx, "trojan"))
+		mum.um[1] = h.(proxy.GetInbound).GetInbound().(proxy.UserManager)
+	}
 	if dev := e.App.IsDev(); !dev {
-		um.RemoveUser(ctx, "test@test.invalid")
+		for _, um := range mum.um {
+			if um == nil {
+				continue
+			}
+			um.RemoveUser(ctx, "test@test.invalid")
+		}
 	}
 	v2stats := v2.GetFeature(stats.ManagerType()).(*v2stats.Manager)
 
@@ -69,7 +96,7 @@ func initV2ray(e *core.ServeEvent) (err error) {
 	{
 		logger := e.App.Logger()
 		for _, d := range devices {
-			if err := um.addRecord(ctx, d); err != nil {
+			if err := mum.addRecord(ctx, d); err != nil {
 				logger.Error("add device failed", "device", d, "error", err)
 			}
 		}
@@ -87,13 +114,13 @@ func initV2ray(e *core.ServeEvent) (err error) {
 		}
 		try.To(e.Next())
 		ctx := e.Request.Context()
-		try.To(um.addRecord(ctx, e.Record))
+		try.To(mum.addRecord(ctx, e.Record))
 		return nil
 	})
 	e.App.OnRecordDeleteRequest(devicesTable).BindFunc(func(e *core.RecordRequestEvent) (err error) {
 		defer err0.Then(&err, nil, nil)
 		ctx := e.Request.Context()
-		try.To(um.removeRecord(ctx, e.Record))
+		try.To(mum.removeRecord(ctx, e.Record))
 		return e.Next()
 	})
 
@@ -126,34 +153,58 @@ func initV2ray(e *core.ServeEvent) (err error) {
 	return e.Next()
 }
 
-type userManager struct {
-	proxy.UserManager
+type multiUserManager struct {
+	um [2]proxy.UserManager // [0]vmess [1]trojan
 }
 
-func (um userManager) addRecord(ctx context.Context, device *core.Record) error {
+func (mum multiUserManager) addRecord(ctx context.Context, device *core.Record) error {
 	idStr := device.GetString("uuid")
 	id, err := uuid.ParseString(idStr)
 	if err != nil {
 		return err
 	}
-	acc := &vmess.MemoryAccount{
-		ID:       protocol.NewID(id),
-		Security: protocol.SecurityType_AUTO,
+	if um := mum.um[0]; um != nil {
+		acc := &vmess.MemoryAccount{
+			ID:       protocol.NewID(id),
+			Security: protocol.SecurityType_AUTO,
+		}
+		user := &protocol.MemoryUser{
+			Account: acc,
+			Email:   protocolEmail(device.Id),
+			Level:   0,
+		}
+		if err := um.AddUser(ctx, user); err != nil {
+			return err
+		}
 	}
-	user := &protocol.MemoryUser{
-		Account: acc,
-		Email:   vmessEmail(device.Id),
-		Level:   0,
+	if um := mum.um[1]; um != nil {
+		acc, _ := (&trojan.Account{Password: idStr}).AsAccount()
+		user := &protocol.MemoryUser{
+			Account: acc,
+			Email:   protocolEmail(device.Id),
+			Level:   0,
+		}
+		if err := um.AddUser(ctx, user); err != nil {
+			return err
+		}
 	}
-	return um.AddUser(ctx, user)
+	return nil
 }
 
-func (um userManager) removeRecord(ctx context.Context, device *core.Record) error {
-	email := vmessEmail(device.Id)
-	return um.RemoveUser(ctx, email)
+func (mum multiUserManager) removeRecord(ctx context.Context, device *core.Record) error {
+	email := protocolEmail(device.Id)
+	for _, um := range mum.um {
+		if um == nil {
+			continue
+		}
+		if err := um.RemoveUser(ctx, email); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func vmessEmail(id string) string {
+func protocolEmail(id string) string {
 	return fmt.Sprintf("%s@internal.invalid", id)
 }
 

@@ -32,6 +32,24 @@
         }
       },
       "tag": "main"
+    },
+    {
+      "port": 10001,
+      "listen": "0.0.0.0",
+      "protocol": "trojan",
+      "settings": {
+        "clients": [
+          {
+            "email": "test@test.invalid",
+            "password": "b831381d-6324-4d53-ad4f-8cda48b30811",
+            "level": 0
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp"
+      },
+      "tag": "trojan"
     }
   ],
   "outbounds": [

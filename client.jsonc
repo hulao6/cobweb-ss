@@ -4,7 +4,15 @@
   },
   "inbounds": [
     {
+      "tag": "socks-vmess",
       "port": 1080,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true }
+    },
+    {
+      "tag": "socks-trojan",
+      "port": 1081,
       "listen": "127.0.0.1",
       "protocol": "socks",
       "settings": { "auth": "noauth", "udp": true }
@@ -12,6 +20,7 @@
   ],
   "outbounds": [
     {
+      "tag": "out-vmess",
       "protocol": "vmess",
       "streamSettings": {
         "network": "ws",
@@ -32,6 +41,36 @@
           }
         ]
       }
+    },
+    {
+      "tag": "out-trojan",
+      "protocol": "trojan",
+      "streamSettings": {
+        "network": "tcp"
+      },
+      "settings": {
+        "servers": [
+          {
+            "address": "127.0.0.1",
+            "port": 10001,
+            "password": "b831381d-6324-4d53-ad4f-8cda48b30811"
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["socks-trojan"],
+        "outboundTag": "out-trojan"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["socks-vmess"],
+        "outboundTag": "out-vmess"
+      }
+    ]
+  }
 }
