@@ -24,6 +24,8 @@ docker exec -ti cobweb /app/cobweb superuser create admin@cobweb.www adminadmin
 
 管理界面: http://127.0.0.1:10000/_/
 
+注意: [v2rayA 的 trojan 配置不支持 websocket](https://github.com/v2rayA/v2rayA/discussions/1790)
+
 # 开发测试
 
 ```sh
