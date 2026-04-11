@@ -23,11 +23,6 @@ func init() {
 		try.To(app.Save(users))
 
 		devices := core.NewBaseCollection("devices", ID("devices"))
-		devices.ListRule = types.Pointer(`@request.query.uuid = uuid`)
-		devices.ViewRule = types.Pointer(`@request.query.uuid = uuid`)
-		devices.CreateRule = nil
-		devices.UpdateRule = nil
-		devices.DeleteRule = nil
 		devices.Fields.Add(
 			&core.TextField{
 				Name: "name", Id: ID("name"), System: true,
@@ -43,6 +38,11 @@ func init() {
 			},
 		)
 		addUpdatedFields(&devices.Fields)
+		devices.ListRule = types.Pointer(`@request.query.uuid = uuid`)
+		devices.ViewRule = types.Pointer(`@request.query.uuid = uuid`)
+		devices.CreateRule = nil
+		devices.UpdateRule = nil
+		devices.DeleteRule = nil
 		devices.AddIndex("uuid", true, "uuid", "")
 		try.To(app.Save(devices))
 
