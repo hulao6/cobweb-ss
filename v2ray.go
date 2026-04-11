@@ -18,10 +18,12 @@ import (
 	"github.com/shynome/err0"
 	"github.com/shynome/err0/try"
 	v2ray "github.com/v2fly/v2ray-core/v5"
+	"github.com/v2fly/v2ray-core/v5/app/router"
 	v2stats "github.com/v2fly/v2ray-core/v5/app/stats"
 	"github.com/v2fly/v2ray-core/v5/common/protocol"
 	"github.com/v2fly/v2ray-core/v5/common/uuid"
 	"github.com/v2fly/v2ray-core/v5/features/inbound"
+	"github.com/v2fly/v2ray-core/v5/features/routing"
 	"github.com/v2fly/v2ray-core/v5/features/stats"
 	_ "github.com/v2fly/v2ray-core/v5/main/distro/all"
 	"github.com/v2fly/v2ray-core/v5/proxy"
@@ -92,6 +94,35 @@ func initV2ray(e *core.ServeEvent) (err error) {
 		}
 	}
 	v2stats := v2.GetFeature(stats.ManagerType()).(*v2stats.Manager)
+
+	rm := v2.GetFeature(routing.RouterType()).(*router.Router)
+	rm.AddRule(VNextRule(e.App))
+	vnextList := try.To1(e.App.FindAllRecords("vnext"))
+	for _, record := range vnextList {
+		c := try.To1(getOutboundConfig(record))
+		try.To(v2ray.AddOutboundHandler(v2, c))
+	}
+	addOutbound := func(e *core.RecordEvent) error {
+		if _, err := getOutboundConfig(e.Record); err != nil {
+			return err
+		}
+		if err := e.Next(); err != nil {
+			return err
+		}
+		c, err := getOutboundConfig(e.Record)
+		if err != nil {
+			return err
+		}
+		return v2ray.AddOutboundHandler(v2, c)
+	}
+	e.App.OnRecordCreate("vnext").BindFunc(addOutbound)
+	e.App.OnRecordUpdate("vnext").BindFunc(addOutbound)
+	e.App.OnRecordDelete("vnext").BindFunc(func(e *core.RecordEvent) error {
+		if err := v2ray.RemoveOutboundHandler(v2, e.Record.Id); err != nil {
+			return err
+		}
+		return e.Next()
+	})
 
 	devices := try.To1(e.App.FindAllRecords(devicesTable))
 	{
