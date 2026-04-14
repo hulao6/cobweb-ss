@@ -17,9 +17,9 @@ https://github.com/user-attachments/assets/767cf8e4-6881-4235-9931-339d54946ff6
 # 使用
 
 ```sh
-docker run -d --name cobweb --restart always -v $PWD/pb_data/:/app/pb_data/ -p 10000:10000 shynome/cobweb:v3.2.1
-# 密码和邮箱记得改成自己喜欢的
-docker exec -ti cobweb /app/cobweb superuser create admin@cobweb.www adminadmin
+docker run -d --name cobweb --restart always -v $PWD/pb_data/:/app/pb_data/ -p 10000:10000 shynome/cobweb:v3.3.0
+# 现在默认会创建下方的用户记得删除或修改密码 (无需自行创建了)
+docker exec -ti cobweb /app/cobweb superuser create admin@cobweb.example admin@cobweb.example
 ```
 
 管理界面: http://127.0.0.1:10000/_/
